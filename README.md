@@ -3,6 +3,7 @@ Kaisa the Sharp Librarian
 
 [![MIT Licensed](https://img.shields.io/github/license/pathogendavid/kaisa?style=flat-square)](LICENSE.txt)
 [![CI Status](https://img.shields.io/github/workflow/status/pathogendavid/kaisa/Kaisa/main?style=flat-square)](https://github.com/PathogenDavid/Kaisa/actions?query=workflow%3AKaisa+branch%3Amain)
+[![NuGet Version](https://img.shields.io/nuget/v/Kaisa?style=flat-square)](https://www.nuget.org/packages/Kaisa/)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-lightgrey?logo=github&style=flat-square)](https://github.com/sponsors/PathogenDavid)
 
 Kaisa is a C# parser for [Windows `.lib` archive/library files](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#archive-library-file-format). It is primarily intended to read import libraries, but it does provide basic support for parsing object files too.

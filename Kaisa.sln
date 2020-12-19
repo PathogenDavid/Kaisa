@@ -3,13 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kaisa.Sample", "Kaisa.Sample\Kaisa.Sample.csproj", "{FF0458E5-39D7-4F6F-B51E-FCF5D6A147DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kaisa.Sample", "Kaisa.Sample\Kaisa.Sample.csproj", "{FF0458E5-39D7-4F6F-B51E-FCF5D6A147DF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kaisa", "Kaisa\Kaisa.csproj", "{7FE09251-152C-4A54-A67C-6ACCF32A2C36}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{149F2F45-3A82-4476-B727-D73AC1BEF8CB}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Global

@@ -1,7 +1,26 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    
+    <!-- Package Info -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>0.0.0-dev</Version>
+    <Version Condition="'$(CiBuildVersion)' != ''">$(CiBuildVersion)</Version>
+    <Description>A C# parser for Windows archive/library (.lib) files.</Description>
+    <Authors>David Maas</Authors>
+    <Copyright>Copyright David Maas</Copyright>
+    <IncludeSymbols>true</IncludeSymbols>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/PathogenDavid/Kaisa</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="" Visible="false" />
+    <!-- Enable Source Link -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
 </Project>
