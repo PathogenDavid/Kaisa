@@ -7,8 +7,24 @@ using System.IO;
 
 namespace Kaisa
 {
+    // Windows: https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#archive-library-file-format
+    // Linux: https://refspecs.linuxfoundation.org/elf/gabi41.pdf#page=152
     public sealed class Archive : IEnumerable<ArchiveMember>
     {
+        private ArchiveVariant _Variant = ArchiveVariant.Unknown;
+        /// <summary>Our best guess at the variant of the archive file format this file was in.</summary>
+        public ArchiveVariant Variant
+        {
+            get => _Variant;
+            init
+            {
+                if (_Variant == ArchiveVariant.Unknown)
+                { _Variant = value; }
+                else if (_Variant != value)
+                { Debug.Fail($"Guessed variant as {value} but variant was already guessed as {_Variant}!"); }
+            }
+        }
+
         public ArchiveIndexV1 IndexV1 { get; }
         public ArchiveIndexV2? IndexV2 { get; }
         public ArchiveLongnames? Longnames { get; }
@@ -27,21 +43,33 @@ namespace Kaisa
                 ArchiveMemberHeader header = new(stream);
                 long expectedEnd = stream.Position + header.Size;
 
+                // The symbol index file is defined as always being first on both Windows and Linux.
                 if (i == 0)
                 {
+                    // Note that archive files can be used for things other than static/import libraries (IE: .deb packages),
+                    // but we don't support them so this exception isn't unreasonable.
                     if (header.Name != "/")
                     { throw new ArgumentException("The library is malformed: Missing index file.", nameof(stream)); }
 
                     IndexV1 = new ArchiveIndexV1(this, header, stream);
                 }
+                // This file is only ever present in Windows-style archives and is always second.
                 else if (i == 1 && header.Name == "/")
-                { IndexV2 = new ArchiveIndexV2(this, header, stream); }
+                {
+                    IndexV2 = new ArchiveIndexV2(this, header, stream);
+                    Variant = ArchiveVariant.Windows;
+                }
+                // The longnames file might not be present if none of the files have names exceeding 15 bytes.
+                // It is expected to come after the symbol index file(s) and before any other "normal" files.
                 else if (header.Name == "//")
                 {
+                    Debug.Assert(i == 1 || i == 2, "The longnames file should always come after the symbol index file(s) and before other files.");
+
                     if (Longnames is not null)
                     { throw new ArgumentException("The library is malformed: Library contains multiple longnames files.", nameof(stream)); }
 
                     Longnames = new ArchiveLongnames(this, header, stream);
+                    Variant = Longnames.GuessVariant();
                 }
                 else
                 {
@@ -49,9 +77,15 @@ namespace Kaisa
                     ushort sig2 = stream.Read<ushort>();
 
                     if (ImportObjectHeader.IsImportObject(sig1, sig2))
-                    { filesBuilder.Add(new ImportArchiveMember(this, header, new ImportObjectHeader(sig1, sig2, stream), stream)); }
+                    {
+                        filesBuilder.Add(new ImportArchiveMember(this, header, new ImportObjectHeader(sig1, sig2, stream), stream));
+                        Variant = ArchiveVariant.Windows;
+                    }
                     else if (CoffHeader.IsMaybeCoffObject(sig1, sig2))
-                    { filesBuilder.Add(new CoffArchiveMember(this, header, new CoffHeader(sig1, sig2, stream), stream)); }
+                    {
+                        filesBuilder.Add(new CoffArchiveMember(this, header, new CoffHeader(sig1, sig2, stream), stream));
+                        Variant = ArchiveVariant.Windows;
+                    }
                     else
                     {
                         filesBuilder.Add(new UnknownArchiveMember(this, header));

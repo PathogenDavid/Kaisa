@@ -4,6 +4,8 @@ using System.IO;
 
 namespace Kaisa
 {
+    // This file only appears in Windows-style libraries
+    // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#second-linker-member
     public sealed class ArchiveIndexV2 : ArchiveMember
     {
         public ImmutableDictionary<string, uint> Symbols { get; }

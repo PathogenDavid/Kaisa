@@ -4,6 +4,9 @@ using System.IO;
 
 namespace Kaisa
 {
+    // The format of the index is the same between Windows and Linux.
+    // Windows: https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#first-linker-member
+    // Linux: https://refspecs.linuxfoundation.org/elf/gabi41.pdf#page=154
     public sealed class ArchiveIndexV1 : ArchiveMember
     {
         public ImmutableDictionary<string, uint> Symbols { get; }
@@ -13,7 +16,7 @@ namespace Kaisa
             : base(library, header)
         {
             long expectedEnd = stream.Position + Size;
-            
+
             uint symbolCount = BitHelper.FromBigEndian(stream.Read<uint>());
             uint[] offsets = new uint[symbolCount];
 

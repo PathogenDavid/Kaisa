@@ -3,6 +3,9 @@ using System.IO;
 
 namespace Kaisa
 {
+    // The format of this header is the same between Windows and Linux.
+    // Windows: https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#archive-member-headers
+    // Linux: https://refspecs.linuxfoundation.org/elf/gabi41.pdf#page=152
     public struct ArchiveMemberHeader
     {
         public string Name { get; }

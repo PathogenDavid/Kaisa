@@ -45,6 +45,12 @@ namespace Kaisa
                 { throw new ArgumentException($"The header is malformed: Could not parse longname offset '{RawName}'.", nameof(header)); }
 
                 Name = library.Longnames.GetLongname(longnameOffset);
+
+                // Unlike the short name, the longname on Windows does not have a terminating slash
+                // On Linux it does: https://refspecs.linuxfoundation.org/elf/gabi41.pdf#page=153
+                // "[...] a table of file names, each followed by a slash [...]"
+                if (Name.EndsWith('/'))
+                { Name = Name.Substring(0, Name.Length - 1); }
             }
             else if (RawName.EndsWith('/'))
             { Name = RawName.Substring(0, RawName.Length - 1); }

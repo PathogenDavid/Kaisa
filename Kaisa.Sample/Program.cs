@@ -46,6 +46,7 @@ else if (args.Length > 1)
 Console.WriteLine($"Reading '{filePath}'...");
 using FileStream stream = new(filePath, FileMode.Open, FileAccess.Read);
 Archive library = new(stream);
+Console.WriteLine($"File guessed to be a {library.Variant}-style archive file.");
 
 // Print archive members
 foreach (ArchiveMember member in library)
