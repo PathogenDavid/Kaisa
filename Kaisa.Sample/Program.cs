@@ -1,5 +1,6 @@
 ﻿using Kaisa;
 using Kaisa.Elf;
+using Kaisa.Sample;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -44,17 +45,18 @@ else if (!File.Exists(filePath))
 else if (args.Length > 1)
 { ShowUsage("Too many arguments specified."); }
 
+using FancyConsoleWriter output = new(Console.Out);
 using FileStream stream = new(filePath, FileMode.Open, FileAccess.Read);
 
 if (Archive.IsArchiveFile(stream))
 {
-    Console.WriteLine($"Reading '{filePath}' as a library archive...");
+    output.WriteLine($"Reading '{filePath}' as a library archive...");
     Archive library = new(stream);
     DumpArchive(library);
 }
 else if (ElfFile.IsElfFile(stream))
 {
-    Console.WriteLine($"Reading '{filePath}' as an ELF object file...");
+    output.WriteLine($"Reading '{filePath}' as an ELF object file...");
     ElfFile elf = new(stream);
     DumpElf(elf);
 }
@@ -63,63 +65,74 @@ else
 
 void DumpArchive(Archive library)
 {
-    Console.WriteLine($"File guessed to be a {library.Variant}-style archive file.");
+    output.WriteLine($"File guessed to be a {library.Variant}-style archive file.");
 
     // Print archive members
     foreach (ArchiveMember member in library)
     {
-        Console.WriteLine(member);
-
-        if (member is CoffArchiveMember coffMember)
+        output.WriteLine(member);
+        using (output.Indent())
         {
-            Console.WriteLine("  Header:");
-            Console.WriteLine($"    Machine: {coffMember.CoffHeader.Machine}");
-            Console.WriteLine($"    SizeOfOptionalHeader: {coffMember.CoffHeader.SizeOfOptionalHeader}");
-            Console.Write($"    Characteristics: ");
+            if (member is CoffArchiveMember coffMember)
             {
-                ImageFileCharacteristics characteristics = coffMember.CoffHeader.Characteristics;
-                bool first = true;
-                foreach (ImageFileCharacteristics flag in Enum.GetValues<ImageFileCharacteristics>())
+                output.WriteLine("Header:");
+                using (output.Indent())
                 {
-                    if (flag == 0)
-                    { continue; }
-
-                    if ((characteristics & flag) == flag)
+                    output.WriteLine($"Machine: {coffMember.CoffHeader.Machine}");
+                    output.WriteLine($"SizeOfOptionalHeader: {coffMember.CoffHeader.SizeOfOptionalHeader}");
+                    output.Write("Characteristics: ");
                     {
-                        if (first)
-                        { first = false; }
-                        else
-                        { Console.Write(" | "); }
+                        ImageFileCharacteristics characteristics = coffMember.CoffHeader.Characteristics;
+                        bool first = true;
+                        foreach (ImageFileCharacteristics flag in Enum.GetValues<ImageFileCharacteristics>())
+                        {
+                            if (flag == 0)
+                            { continue; }
 
-                        Console.Write(flag);
-                        characteristics &= ~flag;
+                            if ((characteristics & flag) == flag)
+                            {
+                                if (first)
+                                { first = false; }
+                                else
+                                { output.Write(" | "); }
+
+                                output.Write(flag);
+                                characteristics &= ~flag;
+                            }
+                        }
+
+                        if (characteristics != 0)
+                        {
+                            if (!first)
+                            { output.Write(" | "); }
+
+                            output.Write($"0x{(ushort)characteristics:X}");
+                        }
+                        else if (first)
+                        { output.Write("None"); }
+                    }
+                    output.WriteLine();
+                }
+
+                if (coffMember.SectionHeaders.Length > 0)
+                {
+                    output.WriteLine("Sections:");
+                    using (output.Indent())
+                    {
+                        foreach (SectionHeader section in coffMember.SectionHeaders)
+                        { output.WriteLine(section); }
                     }
                 }
 
-                if (characteristics != 0)
+                if (coffMember.Symbols.Length > 0)
                 {
-                    if (!first)
-                    { Console.Write(" | "); }
-
-                    Console.Write($"0x{(ushort)characteristics:X}");
+                    output.WriteLine("Symbols:");
+                    using (output.Indent())
+                    {
+                        foreach (CoffSymbol symbol in coffMember.Symbols)
+                        { output.WriteLine(symbol); }
+                    }
                 }
-                else if (first)
-                { Console.Write("None"); }
-            }
-            Console.WriteLine();
-
-            if (coffMember.SectionHeaders.Length > 0)
-            {
-                Console.WriteLine("  Sections:");
-                foreach (SectionHeader section in coffMember.SectionHeaders)
-                { Console.WriteLine($"    {section}"); }
-            }
-
-            if (coffMember.Symbols.Length > 0)
-            {
-                Console.WriteLine("  Symbols:");
-                foreach (CoffSymbol symbol in coffMember.Symbols)
-                { Console.WriteLine($"    {symbol}"); }
             }
         }
     }
@@ -127,13 +140,17 @@ void DumpArchive(Archive library)
 
 void DumpElf(ElfFile elf)
 {
-    Console.WriteLine($"ELF file describes a {elf.Header.Type} file for {elf.Header.Machine} with {elf.Sections.Length} sections.");
+    output.WriteLine($"ELF file describes a {elf.Header.Type} file for {elf.Header.Machine} with {elf.Sections.Length} sections.");
 
     if (elf.Header.OperatingSystemAbi != ElfOperatingSystemAbi.None)
-    { Console.WriteLine($"  File has platform-specific extensions for {elf.Header.OperatingSystemAbi}"); }
+    { output.WriteLineIndented($"File has platform-specific extensions for {elf.Header.OperatingSystemAbi}"); }
 
-    foreach (ElfSection section in elf)
+    output.WriteLine("Sections:");
+    using (output.Indent())
     {
-        Console.WriteLine($"  {section}");
+        foreach (ElfSection section in elf)
+        {
+            output.WriteLine(section);
+        }
     }
 }
