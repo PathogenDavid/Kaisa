@@ -134,23 +134,39 @@ void DumpArchive(Archive library)
                     }
                 }
             }
+            else if (member is ElfArchiveMember elfMember)
+            {
+                using (output.Indent())
+                { DumpElf(elfMember.ElfFile, skipUnstructured: true); }
+            }
         }
     }
 }
 
-void DumpElf(ElfFile elf)
+void DumpElf(ElfFile elf, bool skipUnstructured = false)
 {
     output.WriteLine($"ELF file describes a {elf.Header.Type} file for {elf.Header.Machine} with {elf.Sections.Length} sections.");
 
     if (elf.Header.OperatingSystemAbi != ElfOperatingSystemAbi.None)
     { output.WriteLineIndented($"File has platform-specific extensions for {elf.Header.OperatingSystemAbi}"); }
 
+    if (elf.Sections.Length is 0)
+    { return; }
+
     output.WriteLine("Sections:");
     using (output.Indent())
     {
+        bool wroteSection = false;
         foreach (ElfSection section in elf)
         {
+            if (skipUnstructured && section is UnstructuredSection)
+            { continue; }
+
             output.WriteLine(section);
+            wroteSection = true;
         }
+
+        if (!wroteSection)
+        { output.WriteLine("<All Filtered>"); }
     }
 }

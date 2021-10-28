@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kaisa.Elf;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -41,6 +42,7 @@ namespace Kaisa
             {
                 ArchiveMemberHeader header = new(stream);
                 long expectedEnd = stream.Position + header.Size;
+                ScopedStream scoped = new(stream, stream.Position, header.Size);
 
                 // The symbol index file is defined as always being first on both Windows and Linux.
                 if (i == 0)
@@ -50,12 +52,12 @@ namespace Kaisa
                     if (header.Name != "/")
                     { throw new MalformedFileException("The first file is not a symbol index file.", header.MemberStart); }
 
-                    IndexV1 = new ArchiveIndexV1(this, header, stream);
+                    IndexV1 = new ArchiveIndexV1(this, header, scoped);
                 }
                 // This file is only ever present in Windows-style archives and is always second.
                 else if (i == 1 && header.Name == "/")
                 {
-                    IndexV2 = new ArchiveIndexV2(this, header, stream);
+                    IndexV2 = new ArchiveIndexV2(this, header, scoped);
                     Variant = ArchiveVariant.Windows;
                 }
                 // The longnames file might not be present if none of the files have names exceeding 15 bytes.
@@ -67,7 +69,7 @@ namespace Kaisa
                     if (Longnames is not null)
                     { throw new MalformedFileException("Library contains multiple longnames files.", header.MemberStart); }
 
-                    Longnames = new ArchiveLongnames(this, header, stream);
+                    Longnames = new ArchiveLongnames(this, header, scoped);
                     Variant = Longnames.GuessVariant();
                 }
                 else
@@ -77,12 +79,17 @@ namespace Kaisa
 
                     if (ImportObjectHeader.IsImportObject(sig1, sig2))
                     {
-                        filesBuilder.Add(new ImportArchiveMember(this, header, new ImportObjectHeader(sig1, sig2, stream), stream));
+                        filesBuilder.Add(new ImportArchiveMember(this, header, new ImportObjectHeader(sig1, sig2, stream), scoped));
                         Variant = ArchiveVariant.Windows;
+                    }
+                    else if (ElfIdentity.IsElfFile(sig1, sig2))
+                    {
+                        filesBuilder.Add(new ElfArchiveMember(this, header, sig1, sig2, stream));
+                        Variant = ArchiveVariant.Linux;
                     }
                     else if (CoffHeader.IsMaybeCoffObject(sig1, sig2))
                     {
-                        filesBuilder.Add(new CoffArchiveMember(this, header, new CoffHeader(sig1, sig2, stream), stream));
+                        filesBuilder.Add(new CoffArchiveMember(this, header, new CoffHeader(sig1, sig2, stream), scoped));
                         Variant = ArchiveVariant.Windows;
                     }
                     else
