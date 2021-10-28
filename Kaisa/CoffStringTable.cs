@@ -10,12 +10,13 @@ namespace Kaisa
 
         public CoffStringTable(Stream stream)
         {
+            long stringTableOffset = stream.Position;
             uint stringTableSize = stream.Read<uint>();
             stream.Position -= sizeof(uint); // Offsets and the size include the size field
             StringTable = stream.Read<byte>(checked((int)stringTableSize));
 
             if (stringTableSize > sizeof(uint) && StringTable[stringTableSize - 1] != 0)
-            { throw new ArgumentException("The string table is malformed.", nameof(stream)); }
+            { throw new MalformedFileException("The COFF string table is malformed.", stringTableOffset); }
         }
 
         public string GetString(int offset)

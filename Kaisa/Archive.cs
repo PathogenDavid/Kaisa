@@ -32,9 +32,8 @@ namespace Kaisa
 
         public Archive(Stream stream)
         {
-            string expectedFileSignature = "!<arch>\n";
-            if (stream.ReadAscii(expectedFileSignature.Length) != expectedFileSignature)
-            { throw new ArgumentException("The library is malformed: Invalid file signature.", nameof(stream)); }
+            if (!IsHeaderValid(stream))
+            { throw new MalformedFileException("The specified stream does not appear to represent a valid archive file, the signature is invalid.", stream.Position - ExpectedFileSignature.Length); }
 
             ImmutableArray<ArchiveMember>.Builder filesBuilder = ImmutableArray.CreateBuilder<ArchiveMember>();
 
@@ -49,7 +48,7 @@ namespace Kaisa
                     // Note that archive files can be used for things other than static/import libraries (IE: .deb packages),
                     // but we don't support them so this exception isn't unreasonable.
                     if (header.Name != "/")
-                    { throw new ArgumentException("The library is malformed: Missing index file.", nameof(stream)); }
+                    { throw new MalformedFileException("The first file is not a symbol index file.", header.MemberStart); }
 
                     IndexV1 = new ArchiveIndexV1(this, header, stream);
                 }
@@ -66,7 +65,7 @@ namespace Kaisa
                     Debug.Assert(i == 1 || i == 2, "The longnames file should always come after the symbol index file(s) and before other files.");
 
                     if (Longnames is not null)
-                    { throw new ArgumentException("The library is malformed: Library contains multiple longnames files.", nameof(stream)); }
+                    { throw new MalformedFileException("Library contains multiple longnames files.", header.MemberStart); }
 
                     Longnames = new ArchiveLongnames(this, header, stream);
                     Variant = Longnames.GuessVariant();
@@ -107,11 +106,26 @@ namespace Kaisa
             }
 
             if (IndexV1 is null)
-            { throw new ArgumentException("The library is malformed: Library is empty.", nameof(stream)); }
+            { throw new MalformedFileException("The library is malformed: Library is empty.", stream.Position); }
 
             filesBuilder.Capacity = filesBuilder.Count;
             ObjectFiles = filesBuilder.MoveToImmutable();
         }
+
+        public static bool IsArchiveFile(Stream stream)
+        {
+            if (!stream.CanSeek)
+            { throw new NotSupportedException("Cannot check streams that are not seekable."); }
+
+            long oldPosition = stream.Position;
+            bool result = IsHeaderValid(stream);
+            stream.Position = oldPosition;
+            return result;
+        }
+
+        private const string ExpectedFileSignature = "!<arch>\n";
+        private static bool IsHeaderValid(Stream stream)
+            => stream.ReadAscii(ExpectedFileSignature.Length) == ExpectedFileSignature;
 
         public IEnumerator<ArchiveMember> GetEnumerator()
         {

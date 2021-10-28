@@ -25,17 +25,19 @@ namespace Kaisa
             stream.ReadAscii(6); // Skip group ID (Documented as not populated by Microsoft tools)
             stream.ReadAscii(8); // Skip mode
 
+            long sizeStringOffset = stream.Position;
             string sizeString = stream.ReadAscii(10).TrimEnd(' ');
             int size;
 
             if (!Int32.TryParse(sizeString, out size))
-            { throw new ArgumentException($"The archive is malformed: Could not parse size member '{sizeString}' as an integer."); }
+            { throw new MalformedFileException($"Could not archive member size '{sizeString}' as an integer.", sizeStringOffset); }
 
             Size = size;
 
+            long endOfHeaderMagicOffset = stream.Position;
             string endOfHeaderMagic = stream.ReadAscii(2);
             if (endOfHeaderMagic != "`\n")
-            { throw new ArgumentException("The archive is malformed: End of header magic was incorrect."); }
+            { throw new MalformedFileException("Archive member end of header magic was incorrect.", endOfHeaderMagicOffset); }
 
             MemberDataStart = stream.Position;
             MemberEnd = MemberDataStart + Size;

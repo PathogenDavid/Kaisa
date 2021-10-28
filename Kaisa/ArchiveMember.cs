@@ -38,11 +38,11 @@ namespace Kaisa
             else if (RawName.StartsWith('/'))
             {
                 if (library.Longnames is null)
-                { throw new ArgumentException($"The header is malformed: Header references a longname when the library has no longnames file.", nameof(header)); }
+                { throw new MalformedFileException($"Archive member references a longname, but the library has no longnames file.", MemberStart); }
 
                 int longnameOffset;
                 if (!Int32.TryParse(RawName.AsSpan().Slice(1), out longnameOffset))
-                { throw new ArgumentException($"The header is malformed: Could not parse longname offset '{RawName}'.", nameof(header)); }
+                { throw new MalformedFileException($"Could not parse archive member longname offset '{RawName}'.", MemberStart); }
 
                 Name = library.Longnames.GetLongname(longnameOffset);
 
@@ -50,7 +50,12 @@ namespace Kaisa
                 // On Linux it does: https://refspecs.linuxfoundation.org/elf/gabi41.pdf#page=153
                 // "[...] a table of file names, each followed by a slash [...]"
                 if (Name.EndsWith('/'))
-                { Name = Name.Substring(0, Name.Length - 1); }
+                {
+                    Debug.Assert(library.Variant is ArchiveVariant.Linux, "Only Linux-variant archives should have the trailing slash in longnames.");
+                    Name = Name.Substring(0, Name.Length - 1);
+                }
+                else
+                { Debug.Assert(library.Variant is ArchiveVariant.Windows, "Only Windows-variant archives should omit the trailing slash in longnames."); }
             }
             else if (RawName.EndsWith('/'))
             { Name = RawName.Substring(0, RawName.Length - 1); }

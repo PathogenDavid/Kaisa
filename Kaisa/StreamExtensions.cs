@@ -6,19 +6,28 @@ using System.Text;
 
 namespace Kaisa
 {
-    public static class StreamExtensions
+    internal static class StreamExtensions
     {
+        public static bool TryRead<T>(this Stream stream, Span<T> buffer)
+            where T : unmanaged
+        {
+            long startOffset = stream.Position;
+            Span<byte> bytesBuffer = MemoryMarshal.AsBytes(buffer);
+            return stream.Read(bytesBuffer) == bytesBuffer.Length;
+        }
+
         public static void Read<T>(this Stream stream, Span<T> buffer)
             where T : unmanaged
         {
+            long startOffset = stream.Position;
             Span<byte> bytesBuffer = MemoryMarshal.AsBytes(buffer);
 
             if (stream.Read(bytesBuffer) != bytesBuffer.Length)
             {
                 if (buffer.Length == 1)
-                { throw new InvalidOperationException($"The stream does not contain enough data to read in a {typeof(T)}"); }
+                { throw new MalformedFileException($"The stream does not contain enough data to read in a {typeof(T)}", startOffset); }
                 else
-                { throw new InvalidOperationException($"The stream does not contain enough data to read in {buffer.Length} {typeof(T)} elements"); }
+                { throw new MalformedFileException($"The stream does not contain enough data to read in {buffer.Length} {typeof(T)} elements", startOffset); }
             }
         }
 
@@ -37,17 +46,6 @@ namespace Kaisa
             stream.Read<T>(result);
             return result;
         }
-
-        public static void Write<T>(this Stream stream, ReadOnlySpan<T> data)
-            where T : unmanaged
-        {
-            ReadOnlySpan<byte> bytesBuffer = MemoryMarshal.AsBytes(data);
-            stream.Write(bytesBuffer);
-        }
-
-        public static void Write<T>(this Stream stream, in T data)
-            where T : unmanaged
-            => stream.Write(SpanExtensions.SingleReadOnly(data));
 
         public static string ReadAscii(this Stream stream, int byteCount)
         {
@@ -75,7 +73,7 @@ namespace Kaisa
                 if (byteValue == 0)
                 { break; }
                 else if (byteValue == -1)
-                { throw new InvalidOperationException("The stream does not contain a null-terminated ASCII string."); }
+                { throw new MalformedFileException("The stream does not contain a null-terminated ASCII string.", start); }
 
                 stringLength++;
             }
@@ -99,7 +97,7 @@ namespace Kaisa
                 if (byteValue == 0)
                 { break; }
                 else if (byteValue == -1)
-                { throw new InvalidOperationException("The stream does not contain a null-terminated ASCII string."); }
+                { throw new MalformedFileException("The stream does not contain a null-terminated UTF8 string.", start); }
 
                 stringLength++;
             }

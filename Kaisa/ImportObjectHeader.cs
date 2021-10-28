@@ -22,7 +22,7 @@ namespace Kaisa
         internal ImportObjectHeader(ushort sig1, ushort sig2, Stream stream)
         {
             if (!IsImportObject(sig1, sig2))
-            { throw new ArgumentException("The import object signature is invalid.", nameof(sig1)); }
+            { throw new MalformedFileException("The import object signature is invalid.", stream.Position - (sizeof(ushort) * 2)); }
 
             Version = stream.Read<ushort>();
             Machine = stream.Read<ImageFileMachineType>();
@@ -37,7 +37,20 @@ namespace Kaisa
             Debug.Assert((bitfield >> 5) == 0, "The reserved bits are expected to be 0");
         }
 
-        public static bool IsImportObject(ushort sig1, ushort sig2)
+        public static bool IsImportObject(Stream stream)
+        {
+            if (!stream.CanSeek)
+            { throw new NotSupportedException("Cannot check streams that are not seekable."); }
+
+            long oldPosition = stream.Position;
+            Span<ushort> signature = stackalloc ushort[2];
+            bool success = stream.TryRead(signature);
+            stream.Position = oldPosition;
+
+            return success && IsImportObject(signature[0], signature[1]);
+        }
+
+        internal static bool IsImportObject(ushort sig1, ushort sig2)
             => sig1 == (ushort)ImageFileMachineType.Unknown && sig2 == 0xFFFF;
     }
 }

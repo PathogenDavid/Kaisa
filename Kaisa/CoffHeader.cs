@@ -25,7 +25,7 @@ namespace Kaisa
         private CoffHeader(ImageFileMachineType machine, ushort numberOfSections, Stream stream)
         {
             if (machine == ImageFileMachineType.Unknown && numberOfSections == 0xFFFF)
-            { throw new ArgumentException("The header describes an import object."); }
+            { throw new MalformedFileException("The header describes an import object.", stream.Position - (sizeof(ushort) * 2)); }
 
             Machine = machine;
             NumberOfSections = numberOfSections;
@@ -36,8 +36,24 @@ namespace Kaisa
             Characteristics = stream.Read<ImageFileCharacteristics>();
         }
 
-        public static bool IsMaybeCoffObject(ushort sig1, ushort sig2)
-            // Coff files don't have any recognizable header magic, so we can only guess if a file is a coff file based on whether we recognize the machine type
+        /// <summary>Checks if the specified stream contains what appears to have a COFF object.</summary>
+        /// <remarks>
+        /// COFF files don't have any recognizable header magic, so we guess if a file is a COFF file based on whether we recognize the machine type.
+        /// </remarks>
+        public static bool IsMaybeCoffObject(Stream stream)
+        {
+            if (!stream.CanSeek)
+            { throw new NotSupportedException("Cannot check streams that are not seekable."); }
+
+            long oldPosition = stream.Position;
+            ushort sig1 = stream.Read<ushort>();
+            ushort sig2 = stream.Read<ushort>();
+            stream.Position = oldPosition;
+            return IsMaybeCoffObject(sig1, sig2);
+        }
+
+        internal static bool IsMaybeCoffObject(ushort sig1, ushort sig2)
+            // COFF files don't have any recognizable header magic, so we can only guess if a file is a COFF file based on whether we recognize the machine type
             => Enum.IsDefined((ImageFileMachineType)sig1);
     }
 }

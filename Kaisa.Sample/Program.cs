@@ -45,6 +45,10 @@ else if (args.Length > 1)
 
 Console.WriteLine($"Reading '{filePath}'...");
 using FileStream stream = new(filePath, FileMode.Open, FileAccess.Read);
+
+if (!Archive.IsArchiveFile(stream))
+{ ShowUsage("The specified file does not appear to be a library archive."); }
+
 Archive library = new(stream);
 Console.WriteLine($"File guessed to be a {library.Variant}-style archive file.");
 

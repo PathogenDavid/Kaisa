@@ -42,8 +42,24 @@ namespace Kaisa
             // In Windows-style archives, longnames are null-terminated.
             // In Linux-style archives they are newline-terminated.
             // We don't expect nulls to appear in Linux string tables or newlines to appear in Windows longname tables.
-            for (; Data[end] != 0 && Data[end] != '\n'; end++)
+            for (; end < Data.Length && Data[end] != 0 && Data[end] != '\n'; end++)
             { }
+
+            if (end == Data.Length)
+            { throw new MalformedFileException($"Longname at {offset} is not terminated!", MemberDataStart + offset); }
+
+            switch (Data[end])
+            {
+                case 0:
+                    Debug.Assert(Library.Variant is ArchiveVariant.Windows, "Nulls should only appear in the Windows variant of the longnames file.");
+                    break;
+                case (byte)'\n':
+                    Debug.Assert(Library.Variant is ArchiveVariant.Linux, "Nulls should only appear in the Linux variant of the longnames file.");
+                    break;
+                default:
+                    Debug.Fail("Should not reach here.");
+                    break;
+            }
 
             int length = end - offset;
             return Encoding.ASCII.GetString(Data, offset, length);
