@@ -50,8 +50,13 @@ namespace Kaisa
 
                     if (ImportObjectHeader.IsImportObject(sig1, sig2))
                     { filesBuilder.Add(new ImportArchiveMember(this, header, new ImportObjectHeader(sig1, sig2, stream), stream)); }
-                    else
+                    else if (CoffHeader.IsMaybeCoffObject(sig1, sig2))
                     { filesBuilder.Add(new CoffArchiveMember(this, header, new CoffHeader(sig1, sig2, stream), stream)); }
+                    else
+                    {
+                        filesBuilder.Add(new UnknownArchiveMember(this, header));
+                        stream.Position += header.Size - (sizeof(ushort) * 2);
+                    }
                 }
 
                 if (stream.Position != expectedEnd)

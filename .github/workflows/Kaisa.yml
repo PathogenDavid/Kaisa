@@ -133,7 +133,7 @@ jobs:
 
       # ----------------------------------------------------------------------- Publish Package to GitHub Package Repository
       - name: Push to GitHub Packages
-        run: dotnet nuget push "*.nupkg"  --no-symbols true --api-key ${{secrets.GITHUB_TOKEN}} --source https://nuget.pkg.github.com/${{github.repository_owner}}
+        run: dotnet nuget push "*.nupkg" --no-symbols true --api-key ${{secrets.GITHUB_TOKEN}} --source https://nuget.pkg.github.com/${{github.repository_owner}}
         env:
           # This is a workaround for https://github.com/NuGet/Home/issues/9775
           DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: 0

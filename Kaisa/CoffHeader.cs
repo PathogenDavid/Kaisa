@@ -35,5 +35,9 @@ namespace Kaisa
             SizeOfOptionalHeader = stream.Read<ushort>();
             Characteristics = stream.Read<ImageFileCharacteristics>();
         }
+
+        public static bool IsMaybeCoffObject(ushort sig1, ushort sig2)
+            // Coff files don't have any recognizable header magic, so we can only guess if a file is a coff file based on whether we recognize the machine type
+            => Enum.IsDefined((ImageFileMachineType)sig1);
     }
 }

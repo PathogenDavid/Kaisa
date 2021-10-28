@@ -18,7 +18,7 @@ namespace Kaisa
             CoffHeader = coffHeader;
 
             // If the optional header is present, skip over it
-            // (The documentation is conflict on whether or not this header can be present, but it does state that if it is present it is useless so we don't try to read it if it's there.)
+            // (The documentation is conflicted on whether or not this header can be present, but it does state that if it is present it is useless so we don't try to read it if it's there.)
             stream.Position += CoffHeader.SizeOfOptionalHeader;
 
             ImmutableArray<SectionHeader>.Builder sectionHeaders = ImmutableArray.CreateBuilder<SectionHeader>(CoffHeader.NumberOfSections);
@@ -57,8 +57,9 @@ namespace Kaisa
                 }
             }
 
+            // We might not read everything a COFF file has to offer so just skip to the end (but make sure we didn't overrun it first.)
+            Debug.Assert(stream.Position <= expectedEnd, "COFF file parsing overran the end of the file!");
             stream.Position = expectedEnd;
-            Debug.Assert(stream.Position == expectedEnd);
         }
 
         public override string ToString()

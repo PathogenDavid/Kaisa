@@ -54,6 +54,42 @@ foreach (ArchiveMember member in library)
 
     if (member is CoffArchiveMember coffMember)
     {
+        Console.WriteLine("  Header:");
+        Console.WriteLine($"    Machine: {coffMember.CoffHeader.Machine}");
+        Console.WriteLine($"    SizeOfOptionalHeader: {coffMember.CoffHeader.SizeOfOptionalHeader}");
+        Console.Write($"    Characteristics: ");
+        {
+            ImageFileCharacteristics characteristics = coffMember.CoffHeader.Characteristics;
+            bool first = true;
+            foreach (ImageFileCharacteristics flag in Enum.GetValues<ImageFileCharacteristics>())
+            {
+                if (flag == 0)
+                { continue; }
+
+                if ((characteristics & flag) == flag)
+                {
+                    if (first)
+                    { first = false; }
+                    else
+                    { Console.Write(" | "); }
+
+                    Console.Write(flag);
+                    characteristics &= ~flag;
+                }
+            }
+
+            if (characteristics != 0)
+            {
+                if (!first)
+                { Console.Write(" | "); }
+
+                Console.Write($"0x{(ushort)characteristics:X}");
+            }
+            else if (first)
+            { Console.Write("None"); }
+        }
+        Console.WriteLine();
+
         if (coffMember.SectionHeaders.Length > 0)
         {
             Console.WriteLine("  Sections:");
