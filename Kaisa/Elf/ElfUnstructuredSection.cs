@@ -5,9 +5,9 @@
     /// The data for this member can be read by seeking the archive's stream's position to <see cref="ElfSection.DataStart"/>
     /// and reading up to <see cref="ElfSection.DataLength"/> bytes.
     /// </remarks>
-    public sealed class UnstructuredSection : ElfSection
+    public sealed class ElfUnstructuredSection : ElfSection
     {
-        internal UnstructuredSection(ElfFile file, ElfSectionHeader header, int index)
+        internal ElfUnstructuredSection(ElfFile file, ElfSectionHeader header, int index)
             : base(file, header, index)
         { }
     }

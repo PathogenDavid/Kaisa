@@ -159,7 +159,7 @@ void DumpElf(ElfFile elf, bool skipUnstructured = false)
         bool wroteSection = false;
         foreach (ElfSection section in elf)
         {
-            if (skipUnstructured && section is UnstructuredSection)
+            if (skipUnstructured && section is ElfUnstructuredSection)
             { continue; }
 
             output.WriteLine(section);

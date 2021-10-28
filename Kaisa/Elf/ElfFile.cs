@@ -13,7 +13,7 @@ namespace Kaisa.Elf
         public long FileStartOffset { get; }
         internal bool Is64Bit => Header.Is64Bit;
         public ElfHeader Header { get; }
-        internal StringTableSection? SectionNameTable { get; }
+        internal ElfStringTableSection? SectionNameTable { get; }
 
         public ImmutableArray<ElfSection> Sections { get; }
 
@@ -109,7 +109,7 @@ namespace Kaisa.Elf
                     if (sectionNameTableIndex >= sectionCount)
                     { throw new MalformedFileException($"The section name table was specified at index {sectionNameTableIndex} but the file only contains {sectionCount} sections!", FileStartOffset); }
 
-                    SectionNameTable = StringTableSection.CreateSectionNameTable(this, sectionHeaders[sectionNameTableIndex], stream, sectionNameTableIndex);
+                    SectionNameTable = ElfStringTableSection.CreateSectionNameTable(this, sectionHeaders[sectionNameTableIndex], stream, sectionNameTableIndex);
                 }
 
                 // Read all sections
@@ -127,9 +127,9 @@ namespace Kaisa.Elf
 
                     ElfSection section = header.Type switch
                     {
-                        ElfSectionType.StringTable => new StringTableSection(this, header, stream, i),
-                        ElfSectionType.NoData => new NoDataSection(this, header, i),
-                        _ => new UnstructuredSection(this, header, i)
+                        ElfSectionType.StringTable => new ElfStringTableSection(this, header, stream, i),
+                        ElfSectionType.NoData => new ElfNoDataSection(this, header, i),
+                        _ => new ElfUnstructuredSection(this, header, i)
                     };
                     sectionsBuilder.Add(section);
                 }

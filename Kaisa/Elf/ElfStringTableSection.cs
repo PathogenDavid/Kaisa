@@ -7,15 +7,15 @@ namespace Kaisa.Elf
 {
     // https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.strtab.html
     /// <summary>Represents a string table. (That is, its <see cref="ElfSectionHeader.Type"/> is <see cref="ElfSectionType.StringTable"/>.)</summary>
-    public sealed class StringTableSection : ElfSection
+    public sealed class ElfStringTableSection : ElfSection
     {
         private readonly byte[] Data;
 
-        private StringTableSection(ElfFile file, ElfSectionHeader header, Stream stream, int index, string? name)
+        private ElfStringTableSection(ElfFile file, ElfSectionHeader header, Stream stream, int index, string? name)
             : base(file, header, index, name)
             => Data = GetData(File, Header, stream);
 
-        internal StringTableSection(ElfFile file, ElfSectionHeader header, Stream stream, int index)
+        internal ElfStringTableSection(ElfFile file, ElfSectionHeader header, Stream stream, int index)
             : base(file, header, index)
             => Data = GetData(File, Header, stream);
 
@@ -59,7 +59,7 @@ namespace Kaisa.Elf
             return Encoding.UTF8.GetString(Data, (int)offset, length);
         }
 
-        internal static StringTableSection CreateSectionNameTable(ElfFile file, ElfSectionHeader header, Stream stream, int index)
+        internal static ElfStringTableSection CreateSectionNameTable(ElfFile file, ElfSectionHeader header, Stream stream, int index)
         {
             // Figure out our own name if we have one
             // (This is basically why this factory method exists, without it we'd throw an exception in ElfSection's constructor when it tries to discover the name.)
@@ -72,7 +72,7 @@ namespace Kaisa.Elf
                 name = stream.ReadUtf8NullTerminated();
             }
 
-            return new StringTableSection(file, header, stream, index, name);
+            return new ElfStringTableSection(file, header, stream, index, name);
         }
     }
 }
