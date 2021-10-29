@@ -17,6 +17,7 @@ namespace Kaisa.Elf
         public ulong EntryPointVirtualAddress { get; }
         public long ProgramHeaderTableFileOffset { get; }
         public long SectionHeaderTableFileOffset { get; }
+        public ushort ProgramHeaderTableEntitySize { get; }
         /// <summary>The length of the program header table, 0 if the file has no program header table.</summary>
         public ushort ProgramHeaderTableLength { get; }
         /// <summary>The length of the section header table, see remarks on the meaning of 0.</summary>
@@ -92,7 +93,9 @@ namespace Kaisa.Elf
 
             // Half e_phentsize;
             ushort programHeaderSize = stream.Read<ushort>();
-            //TODO: Validate
+            // If we ever start parsing this we should validate it.
+            // For now just expose it so that it can be validated by someone consuming Kaisa if they so wish.
+            ProgramHeaderTableEntitySize = programHeaderSize;
 
             // Half e_phnum;
             ProgramHeaderTableLength = stream.Read<ushort>();
