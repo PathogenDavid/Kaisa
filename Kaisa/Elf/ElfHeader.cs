@@ -68,7 +68,6 @@ namespace Kaisa.Elf
             if (FileFormatVersion != 1)
             { throw new NotSupportedException($"ELF file version '{FileFormatVersion}' is not supported."); }
 
-            //TODO: Is there implicit padding here? The documentation makes it sound like it should be explicit if it's there
             // Addr e_entry;
             EntryPointVirtualAddress = ReadAddress();
             // Off e_phoff;
@@ -94,6 +93,7 @@ namespace Kaisa.Elf
             // Half e_phentsize;
             ushort programHeaderSize = stream.Read<ushort>();
             //TODO: Validate
+
             // Half e_phnum;
             ProgramHeaderTableLength = stream.Read<ushort>();
 

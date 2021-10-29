@@ -135,10 +135,7 @@ void DumpArchive(Archive library)
                 }
             }
             else if (member is ElfArchiveMember elfMember)
-            {
-                using (output.Indent())
-                { DumpElf(elfMember.ElfFile, skipUnstructured: true); }
-            }
+            { DumpElf(elfMember.ElfFile, skipUnstructured: true); }
         }
     }
 }
@@ -147,8 +144,14 @@ void DumpElf(ElfFile elf, bool skipUnstructured = false)
 {
     output.WriteLine($"ELF file describes a {elf.Header.Type} file for {elf.Header.Machine} with {elf.Sections.Length} sections.");
 
-    if (elf.Header.OperatingSystemAbi != ElfOperatingSystemAbi.None)
-    { output.WriteLineIndented($"File has platform-specific extensions for {elf.Header.OperatingSystemAbi}"); }
+    using (output.Indent())
+    {
+        if (elf.Header.OperatingSystemAbi != ElfOperatingSystemAbi.None)
+        { output.WriteLine($"File has platform-specific extensions for {elf.Header.OperatingSystemAbi}"); }
+
+        output.WriteLine($"Symbol table: {(elf.SymbolTable is null ? "Not present" : $"'{elf.SymbolTable.Name ?? "<Unnamed>"}' containing {elf.SymbolTable.Symbols.Length} symbols")}");
+        output.WriteLine($"Dynamic symbol table: {(elf.DynamicSymbolTable is null ? "Not present" : $"'{elf.DynamicSymbolTable.Name ?? "<Unnamed>"}' containing {elf.DynamicSymbolTable.Symbols.Length} symbols")}");
+    }
 
     if (elf.Sections.Length is 0)
     { return; }
@@ -164,6 +167,25 @@ void DumpElf(ElfFile elf, bool skipUnstructured = false)
 
             output.WriteLine(section);
             wroteSection = true;
+
+            if (section is ElfSymbolTableSection symbolTable)
+            {
+                using (output.Indent())
+                {
+                    int i = 0;
+                    foreach (ElfSymbol symbol in symbolTable)
+                    {
+                        if (i > 50)
+                        {
+                            output.WriteLine("... output truncated ...");
+                            break;
+                        }
+
+                        output.WriteLine(symbol);
+                        i++;
+                    }
+                }
+            }
         }
 
         if (!wroteSection)

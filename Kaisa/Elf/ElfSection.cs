@@ -171,7 +171,23 @@ namespace Kaisa.Elf
             }
         }
 
+        protected virtual string SectionTypeString
+            => GetType().Name;
+
         public override string ToString()
-            => $"[{Index}] {GetType().Name}: '{Name ?? "<Unnamed>"}' @ 0x{DataStart:X}..0x{(ulong)DataStart + DataLength} ({DataLength} bytes)";
+            => $"[{Index}] {SectionTypeString}: '{Name ?? "<Unnamed>"}' @ 0x{DataStart:X}..0x{(ulong)DataStart + DataLength} ({DataLength} bytes)";
+
+        // Special index values, Kaisa generally attempts to hide these so they keep their unfriendly spec names.
+        // Kaisa generally just uses 0 instead of SHN_UNDEF.
+        internal const ushort SHN_UNDEF = 0;
+        internal const ushort SHN_LORESERVE = 0xff00;
+        internal const ushort SHN_LOPROC = 0xff00;
+        internal const ushort SHN_HIPROC = 0xff1f;
+        internal const ushort SHN_LOOS = 0xff20;
+        internal const ushort SHN_HIOS = 0xff3f;
+        internal const ushort SHN_ABS = 0xfff1;
+        internal const ushort SHN_COMMON = 0xfff2;
+        internal const ushort SHN_XINDEX = 0xffff;
+        internal const ushort SHN_HIRESERVE = 0xffff;
     }
 }

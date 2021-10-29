@@ -10,5 +10,7 @@
         internal ElfUnstructuredSection(ElfFile file, ElfSectionHeader header, int index)
             : base(file, header, index)
         { }
+
+        protected override string SectionTypeString => $"{base.SectionTypeString}.{Type}";
     }
 }

@@ -17,6 +17,9 @@ namespace Kaisa.Elf
 
         public ImmutableArray<ElfSection> Sections { get; }
 
+        public ElfSymbolTableSection? SymbolTable { get; }
+        public ElfSymbolTableSection? DynamicSymbolTable { get; }
+
         public ElfFile(Stream stream)
             : this(stream.Read<ushort>(), stream.Read<ushort>(), stream)
         { }
@@ -105,6 +108,7 @@ namespace Kaisa.Elf
                 // Read the section name string table if we have one
                 if (sectionNameTableIndex == 0)
                 { SectionNameTable = null; }
+                else
                 {
                     if (sectionNameTableIndex >= sectionCount)
                     { throw new MalformedFileException($"The section name table was specified at index {sectionNameTableIndex} but the file only contains {sectionCount} sections!", FileStartOffset); }
@@ -114,24 +118,85 @@ namespace Kaisa.Elf
 
                 // Read all sections
                 ImmutableArray<ElfSection>.Builder sectionsBuilder = ImmutableArray.CreateBuilder<ElfSection>(sectionHeaders.Length);
-                foreach (ElfSectionHeader header in sectionHeaders)
+                sectionsBuilder.Count = sectionHeaders.Length;
+
+                if (SectionNameTable is not null)
+                { sectionsBuilder[SectionNameTable.Index] = SectionNameTable; }
+
+                string GetSectionNameForDebugging(uint nameIndex)
+                    => SectionNameTable?.GetString(nameIndex) ?? "<Unknown>";
+
+                TSection? GetLinkedSection<TSection>(ElfSectionHeader header)
+                    where TSection : ElfSection
                 {
-                    int i = sectionsBuilder.Count;
+                    if (header.Link == 0)
+                    { return null; }
 
-                    // The section name table is parsed early so handle inserting it when it is encoutered
-                    if (i == sectionNameTableIndex && i > 0)
-                    {
-                        sectionsBuilder.Add(SectionNameTable);
-                        continue;
-                    }
+                    ElfSection linkedSection = ParseSection(checked((int)header.Link));
+                    if (linkedSection is TSection result)
+                    { return result; }
 
-                    ElfSection section = header.Type switch
+                    throw new MalformedFileException
+                    (
+                        $"Symbol table '{GetSectionNameForDebugging(header.NameIndex)}' references section #{header.Link} as a {typeof(TSection).Name}, but it's a {linkedSection.GetType().Name}.",
+                        header.HeaderStart
+                    );
+                }
+
+                ElfSection ParseSection(int sectionIndex)
+                {
+                    if (sectionsBuilder[sectionIndex] is not null)
+                    { return sectionsBuilder[sectionIndex]; }
+
+                    ElfSectionHeader header = sectionHeaders[sectionIndex];
+                    ElfSection section;
+                    switch (header.Type)
                     {
-                        ElfSectionType.StringTable => new ElfStringTableSection(this, header, stream, i),
-                        ElfSectionType.NoData => new ElfNoDataSection(this, header, i),
-                        _ => new ElfUnstructuredSection(this, header, i)
+                        case ElfSectionType.StringTable:
+                            section = new ElfStringTableSection(this, header, stream, sectionIndex);
+                            break;
+                        case ElfSectionType.SymbolTable:
+                        case ElfSectionType.DynamicSymbolTable:
+                        {
+                            ElfStringTableSection? symbolStringTable = GetLinkedSection<ElfStringTableSection>(header);
+                            section = new ElfSymbolTableSection(this, header, stream, sectionIndex, symbolStringTable);
+                        }
+                        break;
+                        case ElfSectionType.NoData:
+                            section = new ElfNoDataSection(this, header, sectionIndex);
+                            break;
+                        default:
+                            section = new ElfUnstructuredSection(this, header, sectionIndex);
+                            break;
                     };
-                    sectionsBuilder.Add(section);
+
+                    Debug.Assert(sectionsBuilder[sectionIndex] is null);
+                    sectionsBuilder[sectionIndex] = section;
+                    return section;
+                }
+
+                for (int i = 0; i < sectionHeaders.Length; i++)
+                {
+                    // If this section was already parsed (because it was required to parse another section), skip it
+                    if (sectionsBuilder[i] is not null)
+                    { continue; }
+
+                    ElfSection newSection = ParseSection(i);
+
+                    switch (newSection)
+                    {
+                        // Save the symbol tables as they're created
+                        // "Currently, an object file may have only one section of each type"
+                        // https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.sheader.html#sh_type
+                        case ElfSymbolTableSection { Type: ElfSectionType.SymbolTable } newSymbolTable:
+                            Debug.Assert(SymbolTable is null, "File has more than one symbol table!");
+                            SymbolTable ??= newSymbolTable;
+                            break;
+                        case ElfSymbolTableSection { Type: ElfSectionType.DynamicSymbolTable } newDynamicSymbolTable:
+                            Debug.Assert(DynamicSymbolTable is null, "File has more than one dynamic symbol table!");
+                            DynamicSymbolTable ??= newDynamicSymbolTable;
+                            break;
+                    }
                 }
                 Sections = sectionsBuilder.MoveToImmutable();
             }
