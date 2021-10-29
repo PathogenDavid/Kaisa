@@ -116,6 +116,9 @@ namespace Kaisa.Elf
                     SectionNameTable = ElfStringTableSection.CreateSectionNameTable(this, sectionHeaders[sectionNameTableIndex], stream, sectionNameTableIndex);
                 }
 
+                // Temporary lookups for complex section dependencies
+                Dictionary<uint, ElfSymbolTableExtendedIndicesSection> symbolTableExtendedSectionIndices = new();
+
                 // Read all sections
                 ImmutableArray<ElfSection>.Builder sectionsBuilder = ImmutableArray.CreateBuilder<ElfSection>(sectionHeaders.Length);
                 sectionsBuilder.Count = sectionHeaders.Length;
@@ -159,9 +162,17 @@ namespace Kaisa.Elf
                         case ElfSectionType.DynamicSymbolTable:
                         {
                             ElfStringTableSection? symbolStringTable = GetLinkedSection<ElfStringTableSection>(header);
-                            section = new ElfSymbolTableSection(this, header, stream, sectionIndex, symbolStringTable);
+
+                            ElfSymbolTableExtendedIndicesSection? extendedIndices;
+                            if (!symbolTableExtendedSectionIndices.TryGetValue(checked((uint)sectionIndex), out extendedIndices))
+                            { extendedIndices = null; }
+
+                            section = new ElfSymbolTableSection(this, header, stream, sectionIndex, symbolStringTable, extendedIndices);
                         }
                         break;
+                        case ElfSectionType.SymbolTableExtendedIndices:
+                            section = new ElfSymbolTableExtendedIndicesSection(this, header, stream, sectionIndex);
+                            break;
                         case ElfSectionType.NoData:
                             section = new ElfNoDataSection(this, header, sectionIndex);
                             break;
@@ -175,6 +186,40 @@ namespace Kaisa.Elf
                     return section;
                 }
 
+                // First pass: Parse sections that must be parsed before other sections and cannot be parsed on-demand
+                for (int i = 0; i < sectionHeaders.Length; i++)
+                {
+                    // If this section was already parsed (because it was required to parse another section), skip it
+                    if (sectionsBuilder[i] is not null)
+                    { continue; }
+
+                    switch (sectionHeaders[i].Type)
+                    {
+                        case ElfSectionType.SymbolTableExtendedIndices:
+                        {
+                            ElfSection newSection = ParseSection(i);
+                            if (newSection is ElfSymbolTableExtendedIndicesSection extendedIndicesSection)
+                            {
+                                if (!symbolTableExtendedSectionIndices.TryAdd(newSection.Header.Link, extendedIndicesSection))
+                                {
+                                    ElfSymbolTableExtendedIndicesSection conflict = symbolTableExtendedSectionIndices[newSection.Header.Link];
+                                    throw new MalformedFileException
+                                    (
+                                        $"Both symbol table extended index sections {conflict.Name ?? "Unnamed"}[{conflict.Index}] and {newSection.Name ?? "Unnamed"}[{newSection.Index}] " +
+                                        $"correspond with symbol table " +
+                                        $"{GetSectionNameForDebugging(sectionHeaders[checked((int)newSection.Header.Link)].NameIndex)}[{newSection.Header.Link}]!",
+                                        newSection.Header.HeaderStart
+                                    );
+                                }
+                            }
+                            else
+                            { Debug.Fail($"A {ElfSectionType.SymbolTableExtendedIndices} section should parse as a a {nameof(ElfSymbolTableExtendedIndicesSection)}!"); }
+                        }
+                        break;
+                    }
+                }
+
+                // Second pass: Parse all remaining sections
                 for (int i = 0; i < sectionHeaders.Length; i++)
                 {
                     // If this section was already parsed (because it was required to parse another section), skip it

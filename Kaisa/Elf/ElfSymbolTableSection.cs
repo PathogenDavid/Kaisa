@@ -12,7 +12,7 @@ namespace Kaisa.Elf
     {
         public ImmutableArray<ElfSymbol> Symbols { get; }
 
-        public ElfSymbolTableSection(ElfFile file, ElfSectionHeader header, Stream stream, int index, ElfStringTableSection? symbolStringTable)
+        internal ElfSymbolTableSection(ElfFile file, ElfSectionHeader header, Stream stream, int index, ElfStringTableSection? symbolStringTable, ElfSymbolTableExtendedIndicesSection? extendedIndices)
             : base(file, header, index)
         {
             // Validate the symbol string table
@@ -24,6 +24,10 @@ namespace Kaisa.Elf
             { throw new ArgumentException($"The header designates string table #{header.Link} as the symbol string table, but string table #{symbolStringTable.Index} was provided instead.", nameof(symbolStringTable)); }
             else if (symbolStringTable.File != File)
             { throw new ArgumentException("The specified symbol string table doesn't belong to the same ELF file as this symbol table.", nameof(symbolStringTable)); }
+
+            // Validate extended indices
+            if (extendedIndices is not null && extendedIndices.Header.Link != Index)
+            { throw new ArgumentException($"The specified extended indices table does not link to this symbol table.", nameof(extendedIndices)); }
 
             ushort symbolSize = file.Is64Bit ? ElfSymbol.Size64 : ElfSymbol.Size32;
             if ((DataLength % symbolSize) != 0)
@@ -37,7 +41,7 @@ namespace Kaisa.Elf
 
             ImmutableArray<ElfSymbol>.Builder symbolsBuilder = ImmutableArray.CreateBuilder<ElfSymbol>(checked((int)symbolCount));
             for (ulong i = 0; i < symbolCount; i++)
-            { symbolsBuilder.Add(new ElfSymbol(file, stream, symbolStringTable)); }
+            { symbolsBuilder.Add(new ElfSymbol(file, stream, checked((int)i), symbolStringTable, extendedIndices)); }
 
             Symbols = symbolsBuilder.MoveToImmutable();
 

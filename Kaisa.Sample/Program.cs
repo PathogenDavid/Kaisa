@@ -140,7 +140,7 @@ void DumpArchive(Archive library)
     }
 }
 
-void DumpElf(ElfFile elf, bool skipUnstructured = false)
+void DumpElf(ElfFile elf, bool? skipUnstructured = null)
 {
     output.WriteLine($"ELF file describes a {elf.Header.Type} file for {elf.Header.Machine} with {elf.Sections.Length} sections.");
 
@@ -156,13 +156,16 @@ void DumpElf(ElfFile elf, bool skipUnstructured = false)
     if (elf.Sections.Length is 0)
     { return; }
 
+    if (skipUnstructured is null && elf.Sections.Length > 25)
+    { skipUnstructured = true; }
+
     output.WriteLine("Sections:");
     using (output.Indent())
     {
         bool wroteSection = false;
         foreach (ElfSection section in elf)
         {
-            if (skipUnstructured && section is ElfUnstructuredSection)
+            if (skipUnstructured == true && section is ElfUnstructuredSection)
             { continue; }
 
             output.WriteLine(section);

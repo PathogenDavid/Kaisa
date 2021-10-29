@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 
 namespace Kaisa.Elf
@@ -24,16 +23,19 @@ namespace Kaisa.Elf
         /// <summary>A symbol's visibility defines how that symbol may be accessed once it has become part of an executable or shared object.</summary>
         public ElfSymbolVisibility Visibility { get; }
 
+        /// <summary>The raw index which describes where this symbol is defined.</summary>
+        public ushort RawSectionIndex { get; }
+
         private readonly ElfSectionLink DefinedInSectionLink;
         /// <summary>The section which defines this symbol.</summary>
-        public ElfSection DefinedIn => DefinedInSectionLink;
+        public ElfSection? DefinedIn => DefinedInSectionLink;
 
-        internal ElfSymbol(ElfFile file, Stream stream, ElfStringTableSection? symbolStringTable)
+        internal ElfSymbol(ElfFile file, Stream stream, int symbolIndex, ElfStringTableSection? symbolStringTable, ElfSymbolTableExtendedIndicesSection? extendedIndices)
         {
             uint nameIndex;
-            ushort definedInSectionIndex;
             byte rawInfo;
             byte rawOther;
+            long symbolStart = stream.Position;
 
             if (file.Is64Bit)
             {
@@ -44,7 +46,7 @@ namespace Kaisa.Elf
                 // unsigned char st_other
                 rawOther = stream.Read<byte>();
                 // Elf64_Half st_shndx
-                definedInSectionIndex = stream.Read<ushort>();
+                RawSectionIndex = stream.Read<ushort>();
                 // Elf64_Addr st_value
                 Value = stream.Read<ulong>();
                 // Elf64_Xword st_size
@@ -63,7 +65,7 @@ namespace Kaisa.Elf
                 // unsigned char st_other
                 rawOther = stream.Read<byte>();
                 // Elf32_Half st_shndx
-                definedInSectionIndex = stream.Read<ushort>();
+                RawSectionIndex = stream.Read<ushort>();
             }
 
             // Load the name from the symbol string table
@@ -76,10 +78,23 @@ namespace Kaisa.Elf
             }
 
             // Link to the definining section
-            if (definedInSectionIndex == ElfSection.SHN_XINDEX)
-            { throw new NotSupportedException("Kaisa does not support symbols defined indirectly via SHN_XINDEX."); } //TODO
+            if (RawSectionIndex == ElfSection.SHN_XINDEX)
+            {
+                if (extendedIndices is null)
+                { throw new MalformedFileException($"Symbol '{Name ?? "<Unnamed>"}' requires an symbol table extended index section to resolve its definining section, but none was found.", symbolStart); }
 
-            DefinedInSectionLink = new ElfSectionLink(file, definedInSectionIndex);
+                uint definedInSectionIndex = extendedIndices.SectionIndices[symbolIndex];
+
+                // Entries in the extended index table will be SHN_UNDEF if they are not used
+                if (definedInSectionIndex == ElfSection.SHN_UNDEF)
+                { throw new MalformedFileException($"Symbol '{Name ?? "<Unnamed>"}' requires an symbol table extended index section to resolve its definining section, but no corresponding entry was found.", symbolStart); }
+
+                DefinedInSectionLink = ElfSectionLink.MakeIntegerLink(file, definedInSectionIndex);
+            }
+            else if (RawSectionIndex >= ElfSection.SHN_LORESERVE) // For reserved sections set the link to null. The user will have to use the raw index if they know how to handle it.
+            { DefinedInSectionLink = ElfSectionLink.MakeNullLink(file); }
+            else
+            { DefinedInSectionLink = ElfSectionLink.MakeShortLink(file, RawSectionIndex); }
 
             // ELF*_ST_BIND
             Binding = (ElfSymbolBinding)(rawInfo >> 4);
