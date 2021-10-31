@@ -77,6 +77,10 @@ Additionally, relevant [x64-specific extensions](https://refspecs.linuxfoundatio
 
 In theory 32-bit ELF files are supported, but their support is not regularly exercised. Big endian ELF files are not supported unless your app is running on a big endian platform. Developers with more advanced needs might consider evaluating [LibObjectFile](https://github.com/xoofx/LibObjectFile) instead.
 
+### Unsupported ELF features
+
+[The program headers](https://refspecs.linuxfoundation.org/elf/gabi4+/ch5.pheader.html) (if present) are not parsed. However, their offset and size is exposed via `ElfFile.Header` for advanced users who wish to parse them manually.
+
 ## API Stability
 
 This library primarily exists to support the librarian functionality in [Biohazrd](https://github.com/InfectedLibraries/Biohazrd). Not a ton of thought went into the API, especially for things not needed by Biohazrd. As such I might tweak the API to better support these needs as they evolve. I consider this library to be pretty niche, so if you use this library in a major way consider posting a discussion or [DMing me](https://twitter.com/pathogendavid) so I know to avoid breaking you.
