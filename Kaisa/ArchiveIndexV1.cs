@@ -41,7 +41,13 @@ namespace Kaisa
             Symbols = symbolsBuilder.ToImmutable();
             AllSymbols = allSymbolsBuilder.MoveToImmutable();
 
-            Debug.Assert(stream.Position == expectedEnd);
+            // Sometimes the section ends "early" and is padded with nulls so we don't want to assert `streamPosition == expectedEnd` here.
+            Debug.Assert(stream.Position <= expectedEnd);
+#if DEBUG
+            while (stream.Position < expectedEnd)
+            { Debug.Assert(stream.Read<byte>() == 0, "Unread symbol index data contained non-null values!"); }
+#endif
+            stream.Position = expectedEnd;
         }
 
         public override string ToString()
