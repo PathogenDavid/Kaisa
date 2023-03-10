@@ -2,7 +2,7 @@ Kaisa the Sharp Librarian
 ===============================================================================
 
 [![MIT Licensed](https://img.shields.io/github/license/pathogendavid/kaisa?style=flat-square)](LICENSE.txt)
-[![CI Status](https://img.shields.io/github/workflow/status/pathogendavid/kaisa/Kaisa/main?style=flat-square)](https://github.com/PathogenDavid/Kaisa/actions?query=workflow%3AKaisa+branch%3Amain)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/pathogendavid/kaisa/Kaisa.yml?branch=main&style=flat-square&label=CI)](https://github.com/PathogenDavid/Kaisa/actions?query=workflow%3AKaisa+branch%3Amain)
 [![NuGet Version](https://img.shields.io/nuget/v/Kaisa?style=flat-square)](https://www.nuget.org/packages/Kaisa/)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-lightgrey?logo=github&style=flat-square)](https://github.com/sponsors/PathogenDavid)
 
